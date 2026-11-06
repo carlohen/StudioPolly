@@ -1,7 +1,4 @@
--- =====================================================================
--- POLLY DESIGNER · Banco de dados (Supabase / Postgres)
--- Cole tudo no SQL Editor do Supabase e clique em RUN. Pode rodar uma vez só.
--- =====================================================================
+
 
 create extension if not exists btree_gist;   -- impede horários sobrepostos
 create extension if not exists pgcrypto;     -- gera os códigos de acesso das clientes
