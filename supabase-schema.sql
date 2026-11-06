@@ -173,7 +173,6 @@ insert into servicos (id, nome, duracao_min, preco, profissional_id, a_partir, a
  ('S29','Demais serviços (sob consulta)',30,0,'P5',false,false,true);
 
 insert into config (chave, valor) values
- ('whats_salao','5585994007665'),
  ('abre','09:00'), ('fecha','18:00'),
  ('almoco_inicio','12:00'), ('almoco_fim','13:00'),
  ('dias_semana','2,3,4,5,6');               -- 2=terça ... 6=sábado
