@@ -55,17 +55,30 @@ SUPABASE_SECRET_KEY=          # só no servidor, nunca em componente "use client
 - `/`: agendar, com abas "Agendar serviços" e "Combo Inauguração" (mesmo fluxo da versão anterior). No final, botão "Enviar confirmação pelo WhatsApp" e o link "meu agendamento".
 - `/meu-agendamento/[token]`: ver os serviços, horários, total e status; permitir cancelar.
 - `/admin/login`
-- `/admin`: agenda do dia (filtro por data e profissional), com ações de concluído, faltou e cancelado e link do WhatsApp da cliente.
+- `/admin`: agenda (filtro por data, "ver todos os dias" e profissional), com ações de concluído, faltou e cancelado e link do WhatsApp da cliente.
 - `/admin/servicos`: editar nome, preço, duração, profissional e ativo; criar serviço novo.
 - `/admin/profissionais`, `/admin/bloqueios`, `/admin/combo` (datas, vagas, valor), `/admin/config`.
+
+As rotas protegidas do `/admin` ficam dentro do grupo de rotas `src/app/admin/(protected)/` — isso impede que o layout com a checagem de login proteja a própria página `/admin/login` (o que causaria um loop de redirecionamento). `/admin/login` fica fora desse grupo.
 
 ## Visual
 Mobile-first. Cores: ouro `#8B6B2E`, marrom `#6B4E1C`, texto `#4A3512`, creme `#FBF7EF`, linha `#D9C8A3`. Fontes: Cinzel (títulos) e Montserrat (texto). Botões arredondados, como em `referencia/Index.html`. Textos em português do Brasil e valores em R$.
 
-## Ordem de trabalho
-1. Criar o projeto Next.js, configurar o Supabase e as variáveis de ambiente.
-2. Fazer a lógica de horários livres (avulso e combo) com testes.
-3. Página de agendamento e criação da visita.
-4. Página `/meu-agendamento/[token]`.
-5. Login e painel da dona.
-6. Deploy.
+## Status
+
+Feito e testado contra o Supabase real (schema rodado, dados de teste criados e apagados na validação):
+1. ✅ Projeto Next.js, Supabase e variáveis de ambiente configurados.
+2. ✅ Lógica de horários livres (avulso e combo) em `src/lib/agenda/`, com testes (`npm test`).
+3. ✅ Página de agendamento (`/`) e criação da visita (avulso e Combo Inauguração), com rollback se a gravação dos itens falhar.
+4. ✅ Página `/meu-agendamento/[token]` (ver e cancelar).
+5. ✅ Login (Supabase Auth) e painel completo da dona em `/admin`.
+
+Falta:
+6. ⬜ Deploy (Vercel).
+
+## Onde está o quê
+- Lógica de agenda (pura, testável, sem acesso a banco): `src/lib/agenda/{horarios,combo,time,validacao,tstzrange}.ts`
+- Acesso ao banco (usa a secret key, só servidor): `src/lib/agenda/dados.ts`
+- Clientes Supabase: `src/lib/supabase/{client,server,admin}.ts` — `client`/`server` respeitam a sessão e a RLS (usados pelo `/admin`); `admin` usa a secret key e ignora a RLS (usado pelas Server Actions públicas de agendamento, onde não há usuário logado)
+- Server Actions públicas (agendar, cancelar): `src/app/actions.ts`
+- Painel: `src/app/admin/` (`login/` fora da proteção; o resto dentro de `(protected)/`)
