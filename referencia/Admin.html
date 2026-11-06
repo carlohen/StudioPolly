@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="pt-BR"><head><base target="_top"><meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Montserrat:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--ouro:#8B6B2E;--marrom:#6B4E1C;--texto:#4A3512;--linha:#D9C8A3}
+body{margin:0;background:#FBF7EF;color:var(--texto);font-family:Montserrat,sans-serif}
+.w{max-width:860px;margin:0 auto;padding:24px 16px 60px}
+h1{font-family:Cinzel,serif;color:var(--marrom);margin:0 0 16px}h2{font-family:Cinzel,serif;color:var(--marrom)}
+input{padding:10px;border:1.5px solid var(--linha);border-radius:10px;font:15px Montserrat}
+button{padding:10px 16px;border:0;border-radius:20px;background:var(--marrom);color:#fff;font:600 13px Montserrat;cursor:pointer;margin:2px}
+button.s{background:transparent;color:var(--marrom);border:1.5px solid var(--ouro)}
+table{width:100%;border-collapse:collapse;margin-top:14px;font-size:14px;background:#fff}
+td,th{padding:9px;border-bottom:1px solid var(--linha);text-align:left;vertical-align:top}
+.err{color:#9B1C1C;font-weight:600}.canc{opacity:.45;text-decoration:line-through}
+</style></head><body><div class="w">
+<h1>Painel · Polly Designer</h1>
+<div><input type="password" id="pin" placeholder="Senha do painel"> <input type="date" id="dia"> <button onclick="carregar()">Ver agenda</button> <button class="s" onclick="escala()">Escala do combo</button></div>
+<div id="msg"></div><div id="out"></div>
+<script>
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+dia.value = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Fortaleza' });
+const falha = e => msg.innerHTML = '<p class="err">' + esc(e.message) + '</p>';
+function carregar() {
+  msg.innerHTML = ''; google.script.run.withFailureHandler(falha).withSuccessHandler(l => {
+    out.innerHTML = '<h2>' + dia.value.split('-').reverse().join('/') + '</h2>' + (l.length ? '<table><tr><th>Hora</th><th>Cliente</th><th>Serviço</th><th>Profissional</th><th>Status</th><th></th></tr>' +
+      l.map(r => '<tr class="' + (r.status === 'cancelado' ? 'canc' : '') + '"><td>' + esc(r.hora) + '</td><td>' + esc(r.cliente) + '<br><a href="https://wa.me/' + waNum(r.whats) + '" target="_blank">' + esc(r.whats) + '</a></td><td>' +
+        esc(r.servico) + (r.tipo === 'combo' ? ' (combo)' : '') + '</td><td>' + esc(r.prof) + '</td><td>' + esc(r.status) + '</td><td>' +
+        ['concluído', 'faltou', 'cancelado'].map(s => '<button class="s" onclick="mudar(\'' + r.id + '\',\'' + s + '\')">' + s + '</button>').join('') + '</td></tr>').join('') + '</table>' : '<p>Sem agendamentos neste dia.</p>');
+  }).adminAgenda(pin.value, dia.value);
+}
+const waNum = w => { w = String(w).replace(/\D/g, ''); return w.length <= 11 ? '55' + w : w; };
+function mudar(id, st) { if (st === 'cancelado' && !confirm('Cancelar este atendimento? Se for combo, cancela a visita inteira e libera a vaga.')) return; google.script.run.withFailureHandler(falha).withSuccessHandler(carregar).adminStatus(pin.value, id, st); }
+function escala() {
+  msg.innerHTML = ''; google.script.run.withFailureHandler(falha).withSuccessHandler(r => {
+    out.innerHTML = '<h2>Escala do Combo Inauguração</h2><p>Limite real por turno = metade dos blocos de 30 min (a Carlene faz manicure e pedicure, 2 blocos por cliente). Ela fica sem pausa durante o turno.</p>' +
+      ['manha', 'tarde'].map(t => '<h3>' + (t == 'manha' ? 'Manhã' : 'Tarde') + ': ' + r[t].vagas + ' vagas</h3>' + r[t].clientes.map((c, k) =>
+        '<p><b>Cliente ' + (k + 1) + ':</b> ' + c.map(x => x.hora + ' ' + esc(x.n)).join(' · ') + '</p>').join('')).join('');
+  }).adminEscala(pin.value);
+}
+</script></div></body></html>

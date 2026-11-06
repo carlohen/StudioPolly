@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="pt-BR"><head><base target="_top"><meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Montserrat:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--ouro:#8B6B2E;--marrom:#6B4E1C;--texto:#4A3512;--creme:#FBF7EF;--linha:#D9C8A3}
+*{box-sizing:border-box}body{margin:0;background:linear-gradient(#FBF7EF,#F3EADA);color:var(--texto);font-family:Montserrat,sans-serif}
+.w{max-width:560px;margin:0 auto;padding:28px 18px 60px}
+h1{font-family:Cinzel,serif;color:var(--marrom);text-align:center;margin:0;font-size:32px;letter-spacing:1px}
+.sub{text-align:center;margin:4px 0 20px;letter-spacing:2px;font-size:13px}
+nav{display:flex;gap:8px;margin-bottom:18px}
+nav button{flex:1;padding:12px;border:1.5px solid var(--ouro);background:transparent;color:var(--marrom);border-radius:30px;font:600 14px Montserrat;cursor:pointer}
+nav button.on{background:var(--marrom);color:#fff}
+label{display:block;font-weight:600;font-size:14px;margin:14px 0 4px}
+input,select{width:100%;padding:12px;border:1.5px solid var(--linha);border-radius:12px;font:16px Montserrat;background:#fff;color:var(--texto)}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0}
+.chip{padding:9px 14px;border:1.5px solid var(--ouro);border-radius:20px;background:#fff;color:var(--marrom);font:600 14px Montserrat;cursor:pointer}
+.chip:hover,.chip:focus-visible{background:var(--marrom);color:#fff}.chip[disabled]{opacity:.4;cursor:not-allowed}
+.chip.sel{background:var(--marrom);color:#fff}
+.btn{width:100%;margin-top:18px;padding:16px;border:0;border-radius:40px;background:var(--marrom);color:#fff;font:700 16px Montserrat;letter-spacing:1px;cursor:pointer}
+.item{display:flex;justify-content:space-between;align-items:center;background:#fff;border:1.5px solid var(--linha);border-radius:12px;padding:10px 12px;margin:6px 0;font-size:14px}
+.item a{color:var(--ouro);cursor:pointer;font-size:13px}
+.card{background:#fff;border:1.5px solid var(--ouro);border-radius:16px;padding:16px;margin:12px 0}
+.card h3{font-family:Cinzel,serif;margin:0 0 8px;color:var(--marrom)}
+.err{color:#9B1C1C;font-weight:600;margin-top:10px}.ok{color:var(--marrom)}
+.lgpd{font-size:12px;opacity:.85;margin-top:14px}
+a.wa{display:block;text-align:center;text-decoration:none;margin-top:14px;padding:14px;border-radius:40px;background:var(--ouro);color:#fff;font-weight:700}
+ul{padding-left:20px;margin:6px 0}
+</style></head><body><div class="w">
+<h1>Polly Designer</h1><p class="sub">AGENDE SEU HORÁRIO</p>
+<nav><button id="t1" class="on" onclick="aba(1)">Agendar serviços</button><button id="t2" onclick="aba(2)">Combo Inauguração</button></nav>
+
+<section id="s1">
+ <label for="data">Data (terça a sábado)</label><input type="date" id="data" onchange="mudaData()">
+ <label for="serv">Serviço</label><select id="serv" onchange="buscaH()"></select>
+ <div id="hor" class="chips"></div><div id="lista"></div><div id="adds"></div>
+ <label for="nome">Seu nome</label><input id="nome" autocomplete="name">
+ <label for="whats">WhatsApp com DDD</label><input id="whats" inputmode="tel" placeholder="85 9XXXX-XXXX" autocomplete="tel">
+ <p class="lgpd">Usamos seu nome e WhatsApp somente para organizar o agendamento e falar sobre o atendimento.</p>
+ <button class="btn" onclick="enviar()">Confirmar agendamento</button><div id="msg1"></div>
+</section>
+
+<section id="s2" hidden>
+ <div class="card"><h3>Combo Inauguração · <span id="cv"></span></h3>
+  <ul><li>Manicure (mãos) e pedicure (pés)</li><li>Design de sobrancelhas</li><li>Corte de cabelo feminino</li><li>Depilação (buço ou axila)</li>
+  <li>Cortesia: massagem terapêutica e coffee break</li></ul>
+  <p style="font-size:13px">Vagas limitadas. Atendimento mediante agendamento. O sistema monta a ordem dos atendimentos para você.</p></div>
+ <div id="datas"></div>
+ <label for="dep">Depilação</label><select id="dep"><option>Buço</option><option>Axila</option></select>
+ <label for="n2">Seu nome</label><input id="n2" autocomplete="name">
+ <label for="w2">WhatsApp com DDD</label><input id="w2" inputmode="tel" placeholder="85 9XXXX-XXXX">
+ <button class="btn" onclick="enviarCombo()">Reservar vaga no combo</button><div id="msg2"></div>
+</section></div>
+<script>
+let D, itens = [], fimAnt = 0, esc2 = null;
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const fmt = d => d.split('-').reverse().join('/');
+const brl = v => 'R$ ' + Number(v).toFixed(2).replace('.', ',');
+const toMin = s => { const p = s.split(':'); return +p[0] * 60 + +p[1]; };
+const dia = d => new Date(d + 'T12:00:00-03:00').toLocaleDateString('pt-BR', { weekday: 'long' });
+function aba(n) { s1.hidden = n != 1; s2.hidden = n != 2; t1.className = n == 1 ? 'on' : ''; t2.className = n == 2 ? 'on' : ''; }
+google.script.run.withFailureHandler(e => msg1.innerHTML = '<p class="err">' + esc(e.message) + '</p>').withSuccessHandler(init).dadosIniciais();
+function init(d) {
+  D = d; data.min = d.hoje; cv.textContent = brl(d.comboValor);
+  let h = '<option value="">Escolha um serviço</option>';
+  d.profs.forEach(p => {
+    const l = d.servicos.filter(s => s.prof === p.id && s.adicional !== 'sim'); if (!l.length) return;
+    h += '<optgroup label="' + esc(p.nome + ' · ' + p.funcao) + '">' + l.map(s => '<option value="' + s.id + '">' + esc(s.nome) +
+      (s.sobConsulta === 'sim' ? ' (sob consulta)' : ' · ' + (s.aPartir === 'sim' ? 'a partir de ' : '') + brl(s.valor)) + '</option>').join('') + '</optgroup>';
+  });
+  serv.innerHTML = h; renderCombo();
+}
+function mudaData() {
+  itens = []; fimAnt = 0; const d = data.value;
+  if (d && ![2, 3, 4, 5, 6].includes(new Date(d + 'T12:00:00-03:00').getDay())) { msg1.innerHTML = '<p class="err">Atendemos de terça a sábado. Escolha outra data.</p>'; data.value = ''; }
+  else msg1.innerHTML = '';
+  render(); buscaH();
+}
+function buscaH() {
+  hor.innerHTML = ''; const sid = serv.value; if (!sid || !data.value) return;
+  const sv = D.servicos.find(s => s.id === sid);
+  if (sv.sobConsulta === 'sim') { hor.innerHTML = '<a class="wa" target="_blank" href="https://wa.me/' + D.whats + '?text=' + encodeURIComponent('Olá! Gostaria de consultar sobre ' + sv.nome + '.') + '">Consultar pelo WhatsApp</a>'; return; }
+  hor.textContent = 'Buscando horários...';
+  google.script.run.withFailureHandler(e => hor.innerHTML = '<p class="err">' + esc(e.message) + '</p>').withSuccessHandler(l => {
+    hor.innerHTML = l.length ? l.map(t => '<button class="chip" onclick="addItem(\'' + t + '\')">' + t + '</button>').join('') : '<p class="err">Sem horários livres neste dia para esse serviço.</p>';
+  }).horarios(sid, data.value, fimAnt);
+}
+function addItem(hora) {
+  const sv = D.servicos.find(s => s.id === serv.value), pr = D.profs.find(p => p.id === sv.prof);
+  itens.push({ sid: sv.id, hora: hora, nome: sv.nome, prof: sv.prof, pn: pr.nome, valor: +sv.valor, fim: toMin(hora) + +sv.duracao });
+  fimAnt = itens[itens.length - 1].fim; serv.value = ''; hor.innerHTML = ''; render();
+}
+function rm() { itens.pop(); fimAnt = itens.length ? itens[itens.length - 1].fim : 0; render(); buscaH(); }
+function render() {
+  lista.innerHTML = itens.map((i, k) => '<div class="item"><span>' + i.hora + ' · ' + esc(i.nome) + ' (' + esc(i.pn) + ')</span><span>' + brl(i.valor) +
+    (k == itens.length - 1 ? ' <a onclick="rm()">remover</a>' : '') + '</span></div>').join('');
+  const marc = [...document.querySelectorAll('.ad:checked')].map(x => x.value); // mantém o que já foi marcado
+  adds.innerHTML = itens.some(i => i.prof === 'P1') ? '<label>Adicionais (opcional)</label>' + D.servicos.filter(s => s.adicional === 'sim').map(s =>
+    '<label style="font-weight:500"><input type="checkbox" class="ad" value="' + s.id + '" style="width:auto"' + (marc.includes(s.id) ? ' checked' : '') + '> ' + esc(s.nome) + ' · ' + brl(s.valor) + '</label>').join('') : '';
+  if (itens.length) lista.innerHTML += '<p><b>Para marcar outro serviço, escolha-o acima: só aparecem horários depois do anterior.</b></p>';
+}
+function enviar() {
+  msg1.innerHTML = ''; if (!itens.length) { msg1.innerHTML = '<p class="err">Escolha ao menos um serviço e um horário.</p>'; return; }
+  const ad = [...document.querySelectorAll('.ad:checked')].map(x => x.value);
+  const p = { nome: nome.value, whats: whats.value, data: data.value, itens: itens.map(i => ({ sid: i.sid, hora: i.hora })), adds: ad };
+  document.querySelector('#s1 .btn').disabled = true;
+  google.script.run.withFailureHandler(e => { msg1.innerHTML = '<p class="err">' + esc(e.message) + '</p>'; document.querySelector('#s1 .btn').disabled = false; })
+    .withSuccessHandler(r => {
+      const txt = 'Olá! Agendei no Polly Designer em ' + fmt(p.data) + ': ' + itens.map(i => i.hora + ' ' + i.nome).join('; ') + '. Total ' + brl(r.total) + '. Nome: ' + p.nome;
+      s1.innerHTML = '<div class="card"><h3>Agendamento confirmado</h3><p>' + fmt(p.data) + '</p>' + itens.map(i => '<p>' + i.hora + ' · ' + esc(i.nome) + ' (' + esc(i.pn) + ')</p>').join('') +
+        '<p><b>Total: ' + brl(r.total) + '</b></p></div><a class="wa" target="_blank" href="https://wa.me/' + D.whats + '?text=' + encodeURIComponent(txt) + '">Enviar confirmação pelo WhatsApp</a>';
+    }).agendar(p);
+}
+function renderCombo() {
+  datas.innerHTML = D.datas.length ? D.datas.map(d => '<div class="card"><b>' + fmt(d.data) + ' · ' + esc(dia(d.data)) + '</b><div class="chips">' +
+    ['manha', 'tarde'].map(t => '<button class="chip" ' + (d.vagas[t].resta < 1 ? 'disabled' : '') + ' onclick="selCombo(this,\'' + d.data + '\',\'' + t + '\')">' +
+      (t == 'manha' ? 'Manhã 09h–12h' : 'Tarde 13h–18h') + ' · ' + (d.vagas[t].resta < 1 ? 'esgotado' : d.vagas[t].resta + ' vaga(s)') + '</button>').join('') + '</div></div>').join('')
+    : '<p>Nenhuma data de combo aberta no momento.</p>';
+}
+function selCombo(b, d, t) { document.querySelectorAll('#datas .chip').forEach(x => x.classList.remove('sel')); b.classList.add('sel'); esc2 = { data: d, turno: t }; }
+function enviarCombo() {
+  msg2.innerHTML = ''; if (!esc2) { msg2.innerHTML = '<p class="err">Escolha a data e o turno.</p>'; return; }
+  const p = { nome: n2.value, whats: w2.value, data: esc2.data, turno: esc2.turno, depil: dep.value };
+  const b = document.querySelector('#s2 .btn'); b.disabled = true; // evita reservar 2 vagas com clique duplo
+  google.script.run.withFailureHandler(e => { msg2.innerHTML = '<p class="err">' + esc(e.message) + '</p>'; b.disabled = false; }).withSuccessHandler(r => {
+    const txt = 'Olá! Reservei o Combo Inauguração em ' + fmt(p.data) + '. Nome: ' + p.nome;
+    s2.innerHTML = '<div class="card"><h3>Vaga reservada</h3><p>' + fmt(p.data) + ' · ' + brl(r.valor) + ' tudo em um dia</p>' +
+      r.linhas.map(l => '<p>' + l.hora + ' · ' + esc(l.servico) + ' (' + esc(l.prof) + ')</p>').join('') + '<p>Cortesia: coffee break.</p></div>' +
+      '<a class="wa" target="_blank" href="https://wa.me/' + D.whats + '?text=' + encodeURIComponent(txt) + '">Enviar confirmação pelo WhatsApp</a>';
+  }).agendarCombo(p);
+}
+</script></body></html>
